@@ -50,7 +50,8 @@
 #define _STARTER_CYCLIST_H_
 
 #include "StarterCfgDef.h"
-
+#include "RelOps.h"
+ 
 #include <utility>  // for move, forward, std::hash, initializer_list
 #include <iterator> // for iterator_traits
 #include <new>      // for placement new
@@ -314,7 +315,7 @@ struct _ROIterator;
 //template<typename T, typename Allocator = Builder<T>>
 
 template<typename T, typename Allocator = std::allocator<T>>
-class CycList : protected _detail::_CycListBase<T, Allocator>
+class CycList : protected _detail::_CycListBase<T, Allocator>, public RelOps<CycList<T, Allocator>>
 {
     protected:
 
@@ -408,33 +409,12 @@ class CycList : protected _detail::_CycListBase<T, Allocator>
             M_assignDispatch(iniList.begin(), iniList.end());
             return *this;
         }
-
-//------------------------------------------------------------------------------------
-//                              comparator
-//------------------------------------------------------------------------------------
         bool
         operator== (const _Self& other) const noexcept;
 
         bool
-        operator!= (const _Self& other) const noexcept {
-            return !operator ==(other);
-        }
-
-        bool
         operator < (const _Self& other) {
             return std::lexicographical_compare(begin(), end(), other.begin(), other.end());
-        }
-        bool
-        operator<= (const _Self& other) {
-            return operator < (other) || operator == (other);
-        }
-        bool
-        operator> (const _Self& other) {
-            return !operator<= (other);
-        }
-        bool
-        operator>= (const _Self& other) {
-            return !operator< (other);
         }
 //------------------------------------------------------------------------------------
 //                              iterators
@@ -702,7 +682,7 @@ class CycList : protected _detail::_CycListBase<T, Allocator>
 };
 
 //!< implementation of iterators ad some function
-#include "CycList_inl.h"
+#include "CycLis-inl.h"
 
 
 template <typename T, typename A>

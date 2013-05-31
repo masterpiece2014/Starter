@@ -54,6 +54,7 @@
 #pragma once
 
 #include "StarterCfgDef.h"
+#include "RelOps.h"
 
 #include <utility>  // for move, forward, hash
 #include <iterator> // for iterator_traits
@@ -352,7 +353,7 @@ class _SArrayBase
 
 } // namespace _detail
 template <typename T>
-class SArray : protected _detail::_SArrayBase<T>
+class SArray : protected _detail::_SArrayBase<T>, public RelOps<SArray<T>> 
 {
   //  typedef SArray<T, std::function<size_t(size_t)>>    _Self;
         typedef SArray<T>                               _Self;

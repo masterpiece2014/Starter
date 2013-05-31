@@ -37,6 +37,19 @@
 #define _STARTER_CONFIG_H_
 #pragma once
 
+
+#undef likely
+#undef unlikely
+
+#if defined(__GNUC__) && __GNUC__ >= 4
+#define likely(x)   (__builtin_expect((x), 1))
+#define unlikely(x) (__builtin_expect((x), 0))
+#else
+#define likely(x)   (x)
+#define unlikely(x) (x)
+#endif
+
+
 #include <cstddef>
 #include <stdexcept>
 #include <type_traits>
@@ -59,55 +72,6 @@ using std::ptrdiff_t;
 #define _STARTER_GCC_VERSION (__GNUC__*10000 + __GNUC_MINOR__*100 + __GNUC_PATCHLEVEL__)
 #endif // __GNUC__
 
-
-#ifdef _WIN32
-#define __STARTER_ON_WINDOWS 1
-#endif // _WIN32
-
-#ifdef __MINGW__
-#endif
-
-#ifdef _WIN32_WCE
-#endif
-
-#ifdef __MINGW32__
-#endif
-
-#ifdef __linux__
-#endif
-
-#ifdef __APPLE__
-#endif
-
-#ifdef __MVS__
-#endif
-
-#ifdef defined(__sun) && defined(__SVR4)
-#endif
-
-#ifdef _AIX
-#endif
-
-#ifdef __hpux
-#endif
-
-#ifdef _WIN32_WCE
-#endif
-
-#ifdef ANDROID
-#endif
-
-#ifdef _MSC_VER
-#endif
-
-#ifdef __BORLANDC__
-#endif
-
-#ifdef __CYGWIN__
-#endif
-
-
-
 #ifdef _STARTER_GCC_VERSION
 //#pragma message("using g++")
 #include <bits/functexcept.h>
@@ -123,15 +87,11 @@ using std::__throw_range_error;
                             std::range_error(x)
 #endif
 
-#ifdef _MSC_VER
-#pragma message("using MS VC")
-#endif
-
-
 __NAMESPACE_STARTER___BEGIN__
 
 const uint16_t g_inPlcaeExpansionBound = 4096;
 
+// get real value type of the iterator
 template<typename IterType>
 struct realType
 {
@@ -226,6 +186,54 @@ struct IsOneOf<T, T1, Ts...> {
 
 
 __NAMESPACE_STARTER___END__
+
+
+
+#ifdef _WIN32
+#define __STARTER_ON_WINDOWS 1
+#endif // _WIN32
+
+#ifdef __MINGW__
+#endif
+
+#ifdef _WIN32_WCE
+#endif
+
+#ifdef __MINGW32__
+#endif
+
+#ifdef __linux__
+#endif
+
+#ifdef __APPLE__
+#endif
+
+#ifdef __MVS__
+#endif
+
+#ifdef defined(__sun) && defined(__SVR4)
+#endif
+
+#ifdef _AIX
+#endif
+
+#ifdef __hpux
+#endif
+
+#ifdef _WIN32_WCE
+#endif
+
+#ifdef ANDROID
+#endif
+
+#ifdef _MSC_VER
+#endif
+
+#ifdef __BORLANDC__
+#endif
+
+#ifdef __CYGWIN__
+#endif
 
 
 #endif // _STARTER_CONFIG_H_
