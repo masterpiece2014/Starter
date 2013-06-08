@@ -41,7 +41,7 @@
 
 
 
-                // #define BW_RBTREE_DEBUG_
+            //    #define BW_RBTREE_DEBUG_
 
 #ifdef BW_RBTREE_DEBUG_
 
@@ -79,15 +79,6 @@ namespace detail_
 
 enum RBTreeColor{Red = false, Black = true};
 
-struct Nodebase
-{
-    RBTreeColor color_;
-    Nodebase* parent_;
-    Nodebase* left_;
-    Nodebase* right_;
-};
-
-
 template <typename ValueType>
 struct RBTreeIterator;
 
@@ -95,6 +86,15 @@ template <typename ValueType>
 struct RBTreeConstIterator;
 
 }//namespace detail_
+
+
+struct BaseNode
+{
+    detail_::RBTreeColor    color_;
+    BaseNode*               parent_;
+    BaseNode*               left_;
+    BaseNode*               right_;
+};
 
 //        head_           the sentry
 //        head_.left_     first element, the root
@@ -104,14 +104,14 @@ struct RBTreeConstIterator;
 //        should you use RBTree, custom the Node,
 //        for example, see Map, Set
 
-template <typename Node,
-            typename Comparator = std::less<typename Node::KeyType>
-            >
-class RBTree : public Starter::RelOps<RBTree<Node, Comparator>>
+template <typename Node_, typename Comparator>
+class RBTree : public Starter::RelOps<RBTree<Node_, Comparator>>
 {
 public:
-    typedef detail_::Nodebase                               BaseNode;
+    typedef Starter::BaseNode                               BaseNode;
     typedef typename detail_::RBTreeColor                   Color;
+
+    typedef Node_                                           Node;
     typedef typename Node::KeyType                          KeyType;
     typedef typename Node::ValueType                        ValueType;
 
@@ -125,20 +125,24 @@ public:
 
 
 protected:
+
     typedef RBTree<Node, Comparator>                            Self_;
 
     typedef std::function<bool(const KeyType&, const KeyType&)> KeysCompFuncType;
-
 
     // to cope with std::map, std::unordered map, ...
     template <typename foreign_iterator>
     struct compatible_iterator
     {
         enum{ value =
-            std::is_same<typename std::map<KeyType, ValueType>::iterator, foreign_iterator>::value
-        or std::is_same<typename std::multimap<KeyType, ValueType>::iterator, foreign_iterator>::value
-        or std::is_same<typename std::unordered_map<KeyType, ValueType>::iterator, foreign_iterator>::value
-        or std::is_same<typename std::unordered_multimap<KeyType, ValueType>::iterator, foreign_iterator>::value
+            std::is_same<KeyType, decltype(foreign_iterator()->first)>::value
+        && std::is_same<ValueType, decltype(foreign_iterator()->second)>::value
+
+//            std::is_same<typename std::map<KeyType, ValueType>::iterator, foreign_iterator>::value
+//        or std::is_same<typename std::multimap<KeyType, ValueType>::iterator, foreign_iterator>::value
+//        or std::is_same<typename std::unordered_map<KeyType, ValueType>::iterator, foreign_iterator>::value
+//        or std::is_same<typename std::unordered_multimap<KeyType, ValueType>::iterator, foreign_iterator>::value
+
         };
     };
 
@@ -213,6 +217,7 @@ public:
                 this->head_.right_ = S_rightMost(head_.parent_);
             }
         }
+        return *this;
     }
     Self_& operator= (Self_&& other) {
         if(likely(this != &other)) {
@@ -226,21 +231,35 @@ public:
         for(auto iter = init.begin(); iter != init.end(); ++iter) {
             insert(*iter);
         }
+        return *this;
     }
 
     bool operator== (const Self_& other) const noexcept {
-        auto cp = [this](iterator a , iterator b)->bool {
-            return not comp_(a->key, b->key)
-                    and not comp_(b->getKey(), a->getKey());
-        };
-        return std::lexicographical_compare(
-                                this->begin(), this->end(),
-                                other.begin(), other.end(),
-                                cp);
+        if (size_ == other.size_) {
+            auto iter = this->cbegin();
+            auto iter2 = other.cbegin();
+            for (;iter != cend() && iter2 != other.cend();
+                    ++iter, ++iter2) {
+                if ( comp_(iter->getKey(), iter2->getKey())
+                        || comp_(iter2->getKey(), iter->getKey())) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
+//        auto cp = [this](const_iterator a , const_iterator b)->bool {
+//            return !comp_(a->getKey(), b->getKey())
+//                    && !comp_(b->getKey(), a->getKey());
+//        };
+//        return std::lexicographical_compare(
+//                                this->cbegin(), this->cend(),
+//                                other.cbegin(), other.cend(),
+//                                cp);
     bool operator< (const Self_& other) const noexcept {
-        for(auto i = begin(), j = other.begin(); i != end(); ++i, ++j) {
-            if (comp_(i->key, j->key))
+        for(auto i = cbegin(), j = other.cbegin(); i != cend(); ++i, ++j) {
+            if (comp_(i->getKey(), j->getKey()))
                 return true;
             else if((comp_(j->getKey(), i->getKey())));
                 return false;
@@ -304,52 +323,17 @@ protected:
 
 public:
 
-//	template<typename...rcNode>
-//	iterator insert(rcNode&&... onode);
+    template<typename rcNode>
+        typename std::enable_if<std::is_same<typename std::decay<rcNode>::type,
+                                Node>::value,
+        iterator>::type
+     exclusiveInsertion(rcNode&& onode);
 
-template<typename rcNode>
-iterator insert(rcNode&& onode)
- {
-     static_assert(std::is_same<
-                   typename std::decay<rcNode>::type,
-                   Node>::value, "must be [const] Node with the types");
-	BaseNode* parent = &head_;
-	BaseNode* cur    = head_.parent_;
-	bool isLeftLeaf = true;
-	while(nullptr != cur) {
-		parent = cur;
-		if(comp_(  (std::forward<rcNode>(onode)).getKey(),
-                static_cast<Node*>(cur)->getKey())) {
-
-			cur = cur->left_;
-			isLeftLeaf = true;
-		} else {
-			cur = cur->right_;
-			isLeftLeaf = false;
-		}
-	}
-	cur = S_creatNode(std::forward<rcNode>(onode), parent);
-
-	if(isLeftLeaf) {
-		parent->left_ = cur;
-		if(unlikely(&head_ == parent)) { ///////??? easier way ?
-			head_.parent_ = cur;
-			head_.right_ = cur;
-		} else if(parent == head_.left_) {
-			head_.left_ = cur;
-		}
-	}
-	else {
-		parent->right_ = cur;
-		if(parent == head_.right_) {
-			head_.right_ = cur;
-		}
-	}
-	M_rebalanceAfterInsertion(cur);
-	++this->size_;
-	return iterator(cur);
-}
-
+    template<typename rcNode>
+        typename std::enable_if<std::is_same<typename std::decay<rcNode>::type,
+                                Node>::value,
+        iterator>::type
+    duplicatedInsertion(rcNode&& onode);
 
 
     void erase(iterator iter) {
@@ -416,8 +400,44 @@ public:
     bool empty() const noexcept
     { return 0 == this->size_; }
 
-    size_t count(const KeyType& k) const noexcept
-    {   return ( end() == lower_bound(k) ? 0 : 1 ); }
+
+    std::pair<const_iterator, const_iterator>
+    equal_range(const KeyType& k) const noexcept {
+        const BaseNode* cur = head_.parent_;
+        const BaseNode* parent = addressOf(head_);
+        std::pair<const_iterator, const_iterator> pr;
+        while (nullptr != cur) {
+            if (comp_(k, static_cast<const Node*>(cur)->getKey())) {
+                parent = cur;
+                cur = cur->left_;
+            }
+            else if(comp_(static_cast<const Node*>(cur)->getKey(), k)) {
+                cur = cur->right_;
+            }
+            else { // find the same key!
+                auto j = cur;
+                while(nullptr != j->right_
+                    && !comp_(static_cast<const Node*>(cur)->getKey(),
+                                static_cast<const Node*>(j->right_)->getKey())) {
+                    j = j->right_;
+                }
+                pr.first = const_iterator(cur);
+                pr.second = const_iterator(j);
+                auto iter = const_iterator(j);
+                if(unlikely(1 == size_)) {
+                    pr.second = cbegin();//const_iterator(addressOf(head_));
+                }
+                else {
+                    ++iter;
+                    pr.second = iter;
+                }
+                return pr;
+            }
+        }
+        pr.first = const_iterator(parent);
+        pr.second = const_iterator(parent);
+        return pr;
+    }
 
 //-----------------------------------------------------------------------------
 //                  iterator
@@ -439,7 +459,7 @@ public:
     {   return const_iterator(head_.left_); }
 
     const_iterator cend() const noexcept
-    { return const_iterator(addressOf(this->head_)); }
+    { return const_iterator(addressOf(head_)); }
 
     iterator max() noexcept
     {   return iterator(head_.right_);}
@@ -505,13 +525,37 @@ public:
         }
         return iterator(prev);
     }
+
+
+    iterator find(const KeyType& thekey) noexcept {
+        auto i = lower_bound(thekey);
+        if (i = end()
+            || comp_(thekey, i->getKey()) ) {
+
+            return end();
+        }
+        else {
+            return i;
+        }
+    }
+    const_iterator find(const KeyType& thekey) const noexcept {
+        auto i = lower_bound(thekey);
+        if (i = end()
+            || comp_(thekey, i->getKey()) ) {
+            return end();
+        }
+
+        else {
+            return i;
+        }
+    }
 //-----------------------------------------------------------------------------
 //                  getter
 //-----------------------------------------------------------------------------
     reference at (const KeyType& thekey) noexcept {
         iterator iter = lower_bound(thekey);
         if (unlikely(iter.node_ == addressOf(head_)) // empty tree or lower_bound lookup failure
-                    || unlikely(comp_(iter.node_->key, thekey))) {
+                    || unlikely(comp_(iter.node_->getKey(), thekey))) {
             throw std::out_of_range("RBTRee::at()");
         }
         return static_cast<Node*>(iter.node_)->value;
@@ -520,7 +564,7 @@ public:
     const_reference at (const KeyType& thekey) const noexcept {
         iterator iter = lower_bound(thekey);
         if (unlikely(iter.node_ == addressOf(head_)) // empty tree or lower_bound lookup failure
-                    || unlikely(comp_(iter.node_->key, thekey))) {
+                    || unlikely(comp_(iter.node_->getKey(), thekey))) {
             throw std::out_of_range("RBTRee::at()");
         }
         return static_cast<Node*>(iter.node_)->value;
@@ -558,6 +602,9 @@ public:
     }
 
     BaseNode* data() noexcept
+    {   return head_.parent_; }
+
+    const BaseNode* data() const noexcept
     {   return head_.parent_; }
 
 #ifdef BW_RBTREE_DEBUG_

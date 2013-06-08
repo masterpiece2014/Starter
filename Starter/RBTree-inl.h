@@ -1,26 +1,3 @@
- ///////////////////////////////////////////////////////////////////////////////
- ////     Copyright 2013 CaiBowen
- ////     All rights reserved.
- ////
- ////     Author: Cai Bowen
- ////       contact/bug report/get new version
- ////           at
- ////       feedback2bowen@outlook.com
- ////
- ////
- ////     Licensed under the Apache License, Version 2.0 (the "License");
- ////     you may not use this file except in compliance with the License.
- ////     You may obtain a copy of the License at
- ////
- ////              http://www.apache.org/licenses/LICENSE-2.0
- ////
- ////     Unless required by applicable law or agreed to in writing, software
- ////     distributed under the License is distributed on an "AS IS" BASIS,
- ////     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- ////     See the License for the specific language governing permissions and
- ////     limitations under the License.
- ///////////////////////////////////////////////////////////////////////////////
-
 /**
  * @author: CaiBowen
  * @feedback: feedback2bowen@outlook.com
@@ -67,13 +44,118 @@ RBTree<Node, Comparator>::
         other.head_.parent_ = tmpp;
     }
 
-//
-//template <typename Node, typename Comparator>
-//template<typename rcNode>
-//inline typename RBTree<Node, Comparator>::iterator
-//RBTree<Node, Comparator>::
-//    insert(rcNode&& onode)
 
+template <typename Node, typename Comparator>
+template<typename rcNode>
+inline typename std::enable_if<std::is_same<typename std::decay<rcNode>::type,
+                                            Node>::value,
+            typename RBTree<Node, Comparator>::iterator>::type
+RBTree<Node, Comparator>::
+    exclusiveInsertion(rcNode&& onode) {
+
+     static_assert(std::is_same<
+                   typename std::decay<rcNode>::type,
+                   Node>::value, "must be [const] Node with the types");
+
+	BaseNode* parent = &head_;
+	BaseNode* cur    = head_.parent_;
+	bool is_left = true;
+	while (nullptr != cur) {
+		parent = cur;
+		is_left = comp_((std::forward<rcNode>(onode)).getKey(),
+                        static_cast<Node*>(cur)->getKey());
+		if(is_left) {
+			cur = cur->left_;
+		} else {
+			cur = cur->right_;
+		}
+	}
+
+	if (is_left) {
+    	cur = S_creatNode(std::forward<rcNode>(onode), parent);
+		parent->left_ = cur;
+		if(unlikely(&head_ == parent)) { ///////??? easier way ?
+			head_.parent_ = cur;
+			head_.right_ = cur;
+		}
+        else if(parent == head_.left_) {
+			head_.left_ = cur;
+		}
+        M_rebalanceAfterInsertion(cur);
+        ++this->size_;
+	}
+    else {
+        if (comp_(static_cast<Node*>(parent)->getKey(),
+                  (std::forward<rcNode>(onode)).getKey() )) {
+
+            cur = S_creatNode(std::forward<rcNode>(onode), parent);
+            parent->right_ = cur;
+            if(parent == head_.right_) {
+                head_.right_ = cur;
+            }
+            M_rebalanceAfterInsertion(cur);
+            ++this->size_;
+        }
+        else {
+            cur = parent;
+        }
+	}
+	return iterator(cur);
+}
+
+
+
+template <typename Node, typename Comparator>
+template<typename rcNode>
+inline typename std::enable_if<std::is_same<typename std::decay<rcNode>::type,
+                                            Node>::value,
+            typename RBTree<Node, Comparator>::iterator>::type
+RBTree<Node, Comparator>::
+    duplicatedInsertion(rcNode&& onode) {
+
+     static_assert(std::is_same<
+                   typename std::decay<rcNode>::type,
+                   Node>::value, "must be [const] Node with the types");
+
+	BaseNode* parent = &head_;
+	BaseNode* cur    = head_.parent_;
+	bool is_left = true;
+	while (nullptr != cur) {
+		parent = cur;
+		is_left = comp_((std::forward<rcNode>(onode)).getKey(),
+                        static_cast<Node*>(cur)->getKey());
+		if(is_left) {
+			cur = cur->left_;
+		} else {
+			cur = cur->right_;
+		}
+	}
+
+	if (is_left) {
+    	cur = S_creatNode(std::forward<rcNode>(onode), parent);
+		parent->left_ = cur;
+		if(unlikely(&head_ == parent)) { ///////??? easier way ?
+			head_.parent_ = cur;
+			head_.right_ = cur;
+		}
+        else if(parent == head_.left_) {
+			head_.left_ = cur;
+		}
+	}
+    else {
+        cur = S_creatNode(std::forward<rcNode>(onode), parent);
+        parent->right_ = cur;
+        if(parent == head_.right_) {
+            head_.right_ = cur;
+        }
+	}
+    M_rebalanceAfterInsertion(cur);
+    ++this->size_;
+	return iterator(cur);
+}
+//-----------------------------------------------------------------------------
+//                  tree balancing
+//-----------------------------------------------------------------------------
 
 template <typename Node, typename Comparator>
 inline typename RBTree<Node, Comparator>::BaseNode*
@@ -427,13 +509,13 @@ struct RBTreeIterator
     typedef ptrdiff_t                       difference_type;
 
 
-      Nodebase*        node_;    // data.
+      BaseNode*        node_;    // data.
 
       RBTreeIterator()
       : node_(nullptr) { }
 
       explicit
-      RBTreeIterator(Nodebase* node)
+      RBTreeIterator( BaseNode* node)
       : node_(node) { }
 
       RBTreeIterator(const Self_& iter)
@@ -446,13 +528,13 @@ struct RBTreeIterator
       { return static_cast<Node*>(node_); }
 
       Self_& operator++() noexcept {
-          if (node_->right_) {
+          if (nullptr != node_->right_) {
             node_ = node_->right_;
-            while(node_->left_)
+            while(nullptr != node_->left_)
                 node_ = node_->left_;
           }
           else {
-                Nodebase* parent = node_->parent_;
+                BaseNode* parent = node_->parent_;
                 while (node_ == parent->right_) {//
                     node_ = parent;
                     parent = parent->parent_;
@@ -468,14 +550,14 @@ struct RBTreeIterator
       }
 
       Self_& operator--() noexcept {
-          if (node_->left_) {
-                Nodebase* smaller = node_->left_;
-                while (smaller->right_)
+          if (nullptr != node_->left_) {
+                BaseNode* smaller = node_->left_;
+                while (nullptr != smaller->right_)
                     smaller = smaller->right_;
                 node_ = smaller;
           }
           else {
-                Nodebase* parent = node_->parent_;
+                BaseNode* parent = node_->parent_;
                 while (node_ == parent->left_) {
                     node_ = parent;
                     parent = parent->parent_;
@@ -559,11 +641,11 @@ struct RBTreeIterator
 template <typename Node>
 struct RBTreeConstIterator
 {
-    typedef RBTreeIterator<Node>                iterator;
-    typedef RBTreeIterator<Node>                Self_;
+    typedef RBTreeConstIterator<Node>           iterator;
+    typedef RBTreeConstIterator<Node>           Self_;
 
-    typedef typename Node::value                value_type; // concept requires, to cope with stl algorithms
-    typedef typename Node::key                  key_type; // concept requires, to cope with stl algorithms
+    typedef typename Node::ValueType            value_type; // concept requires, to cope with stl algorithms
+    typedef typename Node::KeyType              key_type; // concept requires, to cope with stl algorithms
     typedef const Node&                         reference;
     typedef const Node*                         pointer;
     typedef std::bidirectional_iterator_tag
@@ -571,55 +653,58 @@ struct RBTreeConstIterator
     typedef ptrdiff_t                           difference_type;
 
 
-    Nodebase*        node_;    // data.
+    const BaseNode*        node_;    // data.
 
       RBTreeConstIterator()
       : node_(nullptr) { }
 
       explicit
-      RBTreeConstIterator(Nodebase* node)
+      RBTreeConstIterator(const BaseNode* node)
       : node_(node) { }
 
       RBTreeConstIterator(const iterator& iter)
+      : node_(iter.node_) { }
+
+      RBTreeConstIterator(RBTreeIterator<Node>& iter)
       : node_(iter.node_) { }
 
       reference operator*() const
       { return *(static_cast<Node*>(node_)); }
 
       pointer operator->() const
-      { return static_cast<Node*>(node_); }
+      { return static_cast<const Node*>(node_); }
 
-      Self_& operator++() {
-          if (node_->right_) {
+      Self_& operator++() noexcept {
+          if (nullptr != node_->right_) {
             node_ = node_->right_;
-            while(node_->left_)
+            while(nullptr != node_->left_)
                 node_ = node_->left_;
           }
           else {
-                Nodebase* parent = node_->parent_;
+                BaseNode* parent = node_->parent_;
                 while (node_ == parent->right_) {//
                     node_ = parent;
                     parent = parent->parent_;
                 } //  if (node_->right_ != parent)
-                    node_ = parent;
+                node_ = parent;
           }
           return *this;
       }
-      Self_ operator++(int) {
+      Self_ operator++(int) noexcept {
           iterator tmp(*this);
           this->operator++();
           return tmp;
       }
 
-      Self_& operator--() {
-          if (node_->left_) {
-                Nodebase* smaller = node_->left_;
-                while (smaller->right_)
+      Self_& operator--() noexcept {
+          if (nullptr != node_->left_) {
+                BaseNode* smaller = node_->left_;
+                while (nullptr != smaller->right_)
                     smaller = smaller->right_;
                 node_ = smaller;
           }
           else {
-                Nodebase* parent = node_->parent_;
+                BaseNode* parent = node_->parent_;
                 while (node_ == parent->left_) {
                     node_ = parent;
                     parent = parent->parent_;
@@ -677,10 +762,10 @@ struct RBTreeConstIterator
           return static_cast<Node*>(tmp.node_);
       }
 
-      bool operator== (const Self_& other) const
+      bool operator== (const Self_& other) const noexcept
       { return node_ == other.node_; }
 
-      bool operator!= (const Self_& other) const
+      bool operator!= (const Self_& other) const noexcept
       { return node_ != other.node_; }
 
       bool is_leaf() const noexcept {

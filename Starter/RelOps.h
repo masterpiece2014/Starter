@@ -18,17 +18,17 @@ __NAMESPACE_STARTER___BEGIN__
 template<typename T>
 struct RelOps
 {
-    bool operator!= (const T& other)const noexcept {
-        return !this->operator==(other);
+    friend bool operator!= (const T& jia, const T& yi) noexcept {
+        return !jia == yi;
     }
-    bool operator<= (const T& other) const noexcept {
-        return *this == other || *this < other;
+    friend bool operator<= (const T& jia, const T& yi) noexcept {
+        return (jia < yi || jia == yi);
     }
-    bool operator> (const T& other) const noexcept {
-        return ! (*this <= other);
+    friend bool operator> (const T& jia, const T& yi) noexcept {
+        return yi < jia;
     }
-    bool operator>= (const T& other) const noexcept {
-        return ! (*this < other);
+    friend bool operator>= (const T& jia, const T& yi) noexcept {
+        return !(jia < yi);
     }
 };
 
