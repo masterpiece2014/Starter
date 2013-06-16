@@ -21,27 +21,36 @@
  ////     limitations under the License.
  ///////////////////////////////////////////////////////////////////////////////
 
+
 #ifdef __GNUC__
-#if __GNUC__ < 4 || __GNUC__ == 4 && __GNUC_MINOR__ < 7
-#error please update to GCC 4.7 or higher
+    #define _STARTER_GCC_VERSION_ __GNUC__*100 + __GNUC_MINOR__*10 + __GNUC_PATCHLEVEL__
+
+    #if _STARTER_GCC_VERSION_ < 470
+        #error please update your compiler to GCC 4.7 or higher
+    #endif
+
+#else
+#ifdef _MSC_VER
+    #define _STARTER_MSVC_VERSION_  _MSC_VER
+
+    #if _STARTER_MSVC_VERSION_ < 1700
+        #error please update your compiler to GCC 4.7 or higher
+    #endif
+
 #endif
 #endif
 
-//#ifdef _MSC_VER
-//#if _MSC_VER < 1700
-//#error please update to MS VC 14 or higher
-//#endif
-//#endif // _MSC_VER
 
 #ifndef _STARTER_CONFIG_H_
 #define _STARTER_CONFIG_H_
+
 #pragma once
 
 
 #undef likely
 #undef unlikely
 
-#if defined(__GNUC__) && __GNUC__ >= 4
+#ifdef __GNUC__
 #define likely(x)   (__builtin_expect((x), 1))
 #define unlikely(x) (__builtin_expect((x), 0))
 #else
@@ -64,32 +73,7 @@ using std::ptrdiff_t;
 #define __NAMESPACE_STARTER___END__     } /* namespace Starter  */
 #endif
 
-//# elif defined(__MINGW__) || defined(__MINGW32__)
-//# define GTEST_GCC_VER_ \
-//    (__GNUC__*10000 + __GNUC_MINOR__*100 + __GNUC_PATCHLEVEL__)
-//
-#ifdef __GNUC__
-#define _STARTER_GCC_VERSION (__GNUC__*10000 + __GNUC_MINOR__*100 + __GNUC_PATCHLEVEL__)
-#endif // __GNUC__
-
-#ifdef _STARTER_GCC_VERSION
-//#pragma message("using g++")
-#include <bits/functexcept.h>
-using std::__throw_bad_alloc;
-using std::__throw_out_of_range;
-using std::__throw_range_error;
-#else
-#define __throw_bad_alloc throw\
-                            std::bad_alloc
-#define __throw_out_of_range(x) throw\
-                            std::out_of_range(x)
-#define __throw_range_error(x) throw\
-                            std::range_error(x)
-#endif
-
 __NAMESPACE_STARTER___BEGIN__
-
-const uint16_t g_inPlcaeExpansionBound = 4096;
 
 // get real value type of the iterator
 template<typename IterType>
@@ -142,6 +126,14 @@ template<typename T>
 struct AreFloats<T> {
     enum {value = std::is_floating_point<T>::value};
 };
+
+template<typename T>
+inline T*
+addressOf(T& v) {
+    return reinterpret_cast<T*>
+        (&const_cast<char&>(reinterpret_cast<const volatile char&>(v)));
+}
+
 ////// useless
 //template<typename...Tn>
 //struct AreSame;

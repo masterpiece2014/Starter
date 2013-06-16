@@ -61,10 +61,14 @@
 #include <new>      // for placement new
 #include <stdexcept>// for out_of_rang error
 #include <algorithm>// for lexicographical_compare
+#include <type_traits>
 
 #include "Hash.h"
 
 __NAMESPACE_STARTER___BEGIN__
+
+const uint16_t g_inPlcaeExpansionBound = 4096;
+
 
 namespace _detail {
 
@@ -122,7 +126,6 @@ namespace _detail {
 ////        When exception is throw in copy-relocation, the only guarantee provided is that
 ////            already-constructed objects being destryed.
 //////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 template <typename T>
 class _SArrayBase
@@ -185,7 +188,7 @@ class _SArrayBase
         } _impl;
 
         void M_destroy (T* left, T* right) {
-            constexpr bool callDtor = !std::has_trivial_destructor<T>::value;
+            constexpr bool callDtor = !std::is_trivially_destructible<T>::value;
             D_destroy(left, right,
                       std::integral_constant<bool, callDtor>());
         }
@@ -209,12 +212,12 @@ class _SArrayBase
             if (_impl._left + idx < _impl._leftStorage
                 || _impl._left + idx >= _impl._rightStorage )
 
-                __throw_range_error("SArray::M_checkIndex");
+                throw std::range_error("SArray::M_checkIndex");
         }
         //!< this is for at(), can refer to data only
         void M_checkRange(size_t idx) const {
             if (_impl._left + idx >= _impl._right) {
-                __throw_out_of_range("SArray::M_checkRange");
+                throw std::out_of_range("SArray::M_checkRange");
             }
         }
 
@@ -243,7 +246,7 @@ class _SArrayBase
                     _impl.M_shiftTo((T*)ptr_bit, leftSp, rightSp);
                 }
                 else {
-                    __throw_bad_alloc();
+                    throw std::bad_alloc();
                 }
             }
             else {
@@ -251,7 +254,7 @@ class _SArrayBase
            //     void* start = ptr_bit + (_impl._right - _impl._left) * sizeof(T);
                 void* start = ptr_bit + leftSp * sizeof(T);
                 if ( ! ptr_bit) {
-                    __throw_bad_alloc();
+                    throw std::bad_alloc();
                 }   // do not use memmove
                 memcpy(start,
                        (void*)_impl._left,
@@ -353,7 +356,7 @@ class _SArrayBase
 
 } // namespace _detail
 template <typename T>
-class SArray : protected _detail::_SArrayBase<T>, public RelOps<SArray<T>> 
+class SArray : protected _detail::_SArrayBase<T>, public RelOps<SArray<T>>
 {
   //  typedef SArray<T, std::function<size_t(size_t)>>    _Self;
         typedef SArray<T>                               _Self;
@@ -429,8 +432,8 @@ class SArray : protected _detail::_SArrayBase<T>, public RelOps<SArray<T>>
         SArray (Iter left, Iter right, bool)
         :   SArray(std::distance(left, right)) {// F A
 
-            static_assert(std::is_same<T,
-                                typename Starter::realType<Iter>::value_type>::value,
+            static_assert(std::is_same<typename Starter::realType<Iter>::value_type,
+                                    T>::value,
                                 "iterator value type mismatched");
 
             std::uninitialized_copy(left, right, _impl._left);

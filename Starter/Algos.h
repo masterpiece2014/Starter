@@ -32,13 +32,18 @@
 #ifndef _STARTER_ALGORITHMS_H_
 #define _STARTER_ALGORITHMS_H_
 
+#ifdef __GUNC__
+#pragma GCC system_header
+#endif
+
+#include "StarterCfgDef.h"
+
+#include "bwtest/bwtest.h"
+
 #include <iterator>// for iterator_traits
 #include <limits>
 #include <functional>
-#include "Likely.h"
-
-
-#include "StarterCfgDef.h"
+#include <list>
 __NAMESPACE_STARTER___BEGIN__
 
 
@@ -59,8 +64,11 @@ __NAMESPACE_STARTER___BEGIN__
             yi = starter_move(tmp, TypeName);\
         }
 
-namespace Starter
-{
+#define starter_swap(jia, yi, bin,TypeName)\
+            bin = starter_move(jia, TypeName);\
+            jia = starter_move(yi, TypeName);\
+            yi = starter_move(bin, TypeName);
+
 
 //----------------------------------------------------------------------------
 //                      for iterators
@@ -177,7 +185,7 @@ namespace Starter
     > void
     insertionSort(BidIter left, BidIter right) {
         --right;
-        if (UNLIKELY(right == left))
+        if (unlikely(right == left))
             return;
         for (BidIter cur = left; cur != right; ++cur) {
             BidIter adv(cur);
@@ -340,62 +348,13 @@ namespace Starter
 
 
 //----------------------------------------------------------------------------
-//                      quick sort
-//----------------------------------------------------------------------------
-    template <typename RAIter,
-                typename ValType = typename std::iterator_traits<RAIter>::value_type
-    > void
-    quickSort(RAIter left, RAIter right) {
-
-         if (UNLIKELY(right - left) < 2)//////////////
-                return;
-
-        starter_xchg(*(left + (right-left)/2), *left, ValType);
-
-        RAIter last = left;
-        for (RAIter cur = left + 1; cur != right; ++cur)
-            if (*cur < *left) {
-                ++last;
-                starter_xchg(*last, *cur, ValType);
-            }
-
-        starter_xchg(*left, *last, ValType);
-        quickSort(left, last);
-        quickSort(last + 1, right);
-    }
-
-    template <typename RAIter,
-                typename ValType = typename std::iterator_traits<RAIter>::value_type,// not supported by C++98.
-                    typename Comp = std::function<bool(const ValType&, const ValType&)>// need c++11
-    > void
-    quickSort(RAIter left, RAIter right, Comp comp) {
-
-         if (UNLIKELY(right - left) < 2)//////////////
-                return;
-
-        starter_xchg(*(left + (right-left)/2), *left, ValType);
-
-        RAIter last = left;
-        for (RAIter cur = left + 1; cur != right; ++cur)
-            if (comp(*cur, *left)) {
-                ++last;
-                starter_xchg(*last, *cur, ValType);
-            }
-
-        starter_xchg(*left, *last, ValType);
-        quickSort(left, last, comp);
-        quickSort(last + 1, right, comp);
-    }
-
-
-//----------------------------------------------------------------------------
 //                      bucket sort
 //----------------------------------------------------------------------------
 namespace detail_
 {
     template<typename Contor, typename Val>
     void bk_helper_insert(Contor& contor, const Val& val) {
-        if(UNLIKELY(contor.empty())) {
+        if(unlikely(contor.empty())) {
             contor.push_back(val);
             return;
         }
@@ -415,20 +374,21 @@ namespace detail_
     template<typename Contor, typename Val, typename Comp = std::function<bool(const Val&, const Val&)>
     > void
     bk_helper_insert(Contor& contor, const Val& val, Comp comp) {
-        if(UNLIKELY(contor.empty())) {
+        if(unlikely(contor.empty())) {
             contor.push_back(val);
             return;
         }
         auto cur = contor.begin();
-        while(comp(*cur, val) && cur != contor.end())
+        while(comp(*cur, val) && cur != contor.end()) {
             ++cur;
+        }
 
         contor.insert(cur, val);
     }
 
     template<typename Contor, typename Iter>
     void bk_helper_add(Iter& iter, const Contor& cont) {
-        if(UNLIKELY(cont.empty()))
+        if(unlikely(cont.empty()))
             return;
         for(auto cur = cont.cbegin();
                 cur != cont.cend(); ++cur) {
@@ -460,7 +420,7 @@ namespace detail_
                         std::numeric_limits<typename std::iterator_traits<FwIter>::value_type>::max(),
                 size_t BUCKETNUM = 10,
             typename ValType = typename std::iterator_traits<FwIter>::value_type,
-            typename Contor = std::list<ValType>
+            typename Contor = typename std::list<ValType>
     > void
     bucketSort(FwIter left, FwIter right){
 
@@ -469,8 +429,9 @@ namespace detail_
                                        // cout << MIN <<MAX << endl;
         for (cur = left; cur != right; ++cur) {
                                       //  cout << "\n " << (*cur - MIN) * BUCKETNUM / MAX << "      " << *cur << endl;
-            detail_::bk_helper_insert(buckets[(*cur - MIN) * BUCKETNUM / MAX], *cur);
+            size_t idx = (*cur - MIN) * BUCKETNUM / (MAX - MIN);
 
+            detail_::bk_helper_insert(buckets[idx], *cur);
         }
         cur = left;
         for(size_t i = 0; i != BUCKETNUM; ++i) {
@@ -496,7 +457,11 @@ namespace detail_
                                        // cout << MIN <<MAX << endl;
         for (cur = left; cur != right; ++cur) {
                                       //  cout << "\n " << (*cur - MIN) * BUCKETNUM / MAX << "      " << *cur << endl;
-            detail_::bk_helper_insert(buckets[(*cur - MIN) * BUCKETNUM / MAX], *cur, comp);
+          //  detail_::bk_helper_insert(buckets[(*cur - MIN) * BUCKETNUM / MAX], *cur, comp);
+
+            size_t idx = (*cur - MIN) * BUCKETNUM / (MAX - MIN);
+
+            detail_::bk_helper_insert(buckets[idx], *cur, comp);
 
         }
         cur = left;
@@ -625,12 +590,6 @@ namespace detail_
     }
 
 
-    size_t log2(size_t n) {
-        size_t log = 0;
-        while ( n >>= 1)  ++log;
-        return log;
-    }
-
 
     template <typename RAIter,
                 typename ValType = typename std::iterator_traits<RAIter>::value_type
@@ -657,96 +616,109 @@ namespace detail_
 
 
 
-
 //   starter_xchg(*arr, *(arr + 9), int);
 //   Starter::detail_::maxHeapify(arr, 0, 9);///////////////////
 //
 
-
-
 namespace detail_
 {
-    size_t thresHold = 16;
+    const size_t thresHold = 16;
 
-
-    template <typename RAIter,
-                typename ValType = typename std::iterator_traits<RAIter>::value_type// not supported by C++98.
-    > void
-    move_middle_value_iter_to_first(RAIter& a, RAIter& b, RAIter& c) {
-        if (*a < *b) {
-            if (*b < *c) {
-              //  starter_xchg(a, b, RAIter);
-              starter_xchg(*a, *b, ValType);
-            }
-            else if (*a < *c) {
-               // starter_xchg(a, c, RAIter);
-
-               starter_xchg(*a, *c, ValType);
-            }
-        }
-        else {
-            if (*c < *b) {
-              //  starter_xchg(a, b, RAIter);
-              starter_xchg(*a, *b, ValType);
-            }
-            else if (*c < *a) {
-               // starter_xchg(a, c, RAIter);
-               starter_xchg(*a, *c, ValType);
-            }
-        }
+    size_t log2(size_t n) {
+        size_t log = 0;
+        while ( n >>= 1)  ++log;
+        return log;
     }
-    template <typename RAIter,
-                typename ValType = typename std::iterator_traits<RAIter>::value_type// not supported by C++98.
-    > RAIter
-    partition(RAIter left, RAIter right, const ValType& pivot) {
-        RAIter middle = left + (right - left) / 2;
-        move_middle_value_iter_to_first(left, middle, right - 1);
-
-        while (true) {///////////////////////////////////////////////////////
-            while (*left < pivot)
-                ++left;
-            --right;
-            while (pivot < *right)
-                --right;
-            if (! left < right)
-                return left;
-
-            starter_xchg(*left, *right, ValType);
-            ++left;
-        }
-      //  return left;
-    }
-    template <typename RAIter>
-    void introspectiveSortLoops(RAIter left, RAIter right, size_t deptLimit) {
-        while (right - left > thresHold) {
-            if (!deptLimit) {
-                heapSort(left, right);
-                return;
-            }
-            --deptLimit;
-
-            move_middle_value_iter_to_first(left, left + (right - left)/2, right);
-
-            RAIter pivotIter = partition(left + 1, right, *left);
-
-            introspectiveSortLoops(pivotIter, right, deptLimit);
-            left = pivotIter;
-        }
-    }
-/////////////////////////////////
-/////////////////
 
 }// namespace detail_
 
-    template <typename RAIter,
-                typename ValType = typename std::iterator_traits<RAIter>::value_type// not supported by C++98.
-    > void
-    introSort(RAIter left, RAIter right) {
-        if (right != left) {
-            detail_::introspectiveSortLoops(left, right, 2*log2(right - left));
-            insertionSort(left, right);
+
+//----------------------------------------------------------------------------
+//                      quick sort
+//----------------------------------------------------------------------------
+
+    template <typename BidIter,
+                typename Pred,
+                typename ValType = typename std::iterator_traits<BidIter>::value_type
+    > BidIter
+    getParted(BidIter left, BidIter right, Pred comp) {
+        if (unlikely(left == right)) {
+            return left;
         }
+        while (comp(*left)) {
+            ++left;
+            if (left == right) {
+                return left;
+            }
+        }
+        BidIter last = left++;
+        while (left != right) {
+            if (comp(*left)) {
+                starter_xchg(*last, *left, ValType);
+                ++last;
+            }
+            ++left;
+        }
+        return last;
     }
+
+    template <typename RAIter,
+                typename ValType = typename std::iterator_traits<RAIter>::value_type
+    > void
+    quickSort(RAIter left, RAIter right) {
+
+        size_t length = right - left;
+        if(unlikely(length < 2)) {
+            return;
+        }
+        starter_xchg(*(left + length/2), *left, ValType);
+
+        RAIter last = left;
+        for (RAIter cur = left + 1; cur != right; ++cur)
+            if (*cur < *left) {
+                ++last;
+                starter_xchg(*last, *cur, ValType);
+            }
+
+        starter_xchg(*left, *last, ValType);
+        quickSort(left, last);
+        quickSort(last + 1, right);
+    }
+
+//    template <typename RAIter,
+//                typename ValType = typename std::iterator_traits<RAIter>::value_type,// not supported by C++98.
+//                    typename Comp = std::function<bool(const ValType&, const ValType&)>// need c++11
+//    > void
+//    quickSort(RAIter left, RAIter right, Comp comp) {
+//
+//        size_t length = right - left;
+//        if(unlikely(length < 2)) {
+//            return;
+//        }
+//
+//        starter_xchg(*(left + length/2), *left, ValType);
+//
+//        RAIter last = left;
+//        for (RAIter cur = left + 1; cur != right; ++cur) {
+//            if (comp(*cur, *left)) {
+//                ++last;
+//                starter_xchg(*last, *cur, ValType);
+//            }
+//        }
+//        starter_xchg(*left, *last, ValType);
+//        quickSort(left, last, comp);
+//        quickSort(last + 1, right, comp);
+//    }
+
+//    template <typename RAIter,
+//                typename ValType = typename std::iterator_traits<RAIter>::value_type// not supported by C++98.
+//    > void
+//    introSort(RAIter left, RAIter right) {
+//        if (right != left) {
+//            detail_::introspectiveSortLoops(left, right, 2*log2(right - left));
+//            insertionSort(left, right);
+//        }
+//    }
 
 
 

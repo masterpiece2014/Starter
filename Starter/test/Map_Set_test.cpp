@@ -35,7 +35,7 @@ TEST(unique, 1)
 
     unsigned long long int NN = 2<<15;
     vec.reserve(NN);
-    for(auto i = 0; i != (NN); ++i) {
+    for(size_t i = 0; i != (NN); ++i) {
         double t =  rand() * ((double)(rand() >> 31)) / RAND_MAX;
         smp.insert(make_pair(t,1));
         mp.insert(t, 1);
@@ -214,8 +214,8 @@ TEST(set_insert_erase, 1)
 ////    TreeMap<int, double> mymap;
 //    mymap.insert(stds.begin(), stds.end());
 //}
-
-int main()
-{
-	RUN_ALL();
-}
+//
+//int main()
+//{
+//	RUN_ALL();
+//}

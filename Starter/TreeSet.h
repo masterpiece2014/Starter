@@ -53,16 +53,16 @@ namespace detail_
 
 template<typename K, typename C = std::less<K>>
 using TreeSet = detail_::GenSet<K,
-                                        C,
-                                        RBTree<detail_::SetNode<const K>, C>
-                                    >;
+                                C,
+                                RBTree<detail_::SetNode<const K>, C>
+                            >;
 
 
 template<typename K, typename C = std::less<K>>
 using MultiTreeSet = detail_::GenMultiSet<K,
                                         C,
                                         RBTree<detail_::SetNode<const K>, C>
-                                    >;
+                            >;
 
 __NAMESPACE_STARTER___END__
 #endif // STARTER_TREESEY_H_

@@ -14,9 +14,10 @@
 #include "SetBase.h"
 #include "HashContainer.h"
 
+//#include "Hash.h"
 
-//__NAMESPACE_STARTER___BEGIN__
-//
+__NAMESPACE_STARTER___BEGIN__
+
 //namespace detail_
 //{
 //        // to use Set , just custom a node

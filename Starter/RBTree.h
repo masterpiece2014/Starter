@@ -39,8 +39,6 @@
 #endif
 
 
-
-
             //    #define BW_RBTREE_DEBUG_
 
 #ifdef BW_RBTREE_DEBUG_
@@ -102,11 +100,25 @@ struct BaseNode
 //        head_.parent_
 
 //        should you use RBTree, custom the Node,
-//        for example, see Map, Set
+//        for example, see TreeMap, TreeSet
 
 template <typename Node_, typename Comparator>
 class RBTree : public Starter::RelOps<RBTree<Node_, Comparator>>
 {
+
+    static_assert(std::is_base_of<Starter::BaseNode, Node_>::value,
+                    "customed node must be derived from \"Starter::BaseNode\"\n");
+
+
+    static_assert(std::is_same<typename Node_::KeyType,
+                              //  typename std::result_of<Node_::getKey>::type
+                              decltype(std::declval(Node_::getKey()))
+                    >::value,
+        " customed node must define type \"KeyType\" and define function \"getKey\"\n");
+
+
+
+
 public:
     typedef Starter::BaseNode                               BaseNode;
     typedef typename detail_::RBTreeColor                   Color;
@@ -258,13 +270,14 @@ public:
 //                                other.cbegin(), other.cend(),
 //                                cp);
     bool operator< (const Self_& other) const noexcept {
-        for(auto i = cbegin(), j = other.cbegin(); i != cend(); ++i, ++j) {
-            if (comp_(i->getKey(), j->getKey()))
-                return true;
-            else if((comp_(j->getKey(), i->getKey())));
+        for(auto i = this->cbegin(), j = other.cbegin();
+                (j != other.cend() && i != this->cend());
+                        ++i, ++j) {
+            if ( !comp_(i->getKey(), j->getKey())) {
                 return false;
+            }
         }
-        return false;
+        return true;
     }
 
     void swap(Self_&) noexcept;
@@ -635,7 +648,7 @@ public:
 
 };
 
-#include "rbtree-inl.h"
+#include "RBTree-inl.h"
 __NAMESPACE_STARTER___END__
 
 

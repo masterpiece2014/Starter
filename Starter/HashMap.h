@@ -12,11 +12,43 @@
 
 #include "StarterCfgDef.h"
 
-
 #include "SetBase.h"
 #include "HashContainer.h"
 
+//#include "Hash.h"
+
 __NAMESPACE_STARTER___BEGIN__
+
+struct HashNodeBase
+{
+    HashNodeBase* next = nullptr;
+
+//    explicit HashNodeBase(const HashNodeBase* pt)
+//    :   next
+
+    size_t count() const noexcept {
+        HashNodeBase* cur = next;
+        size_t ct = 0;
+        while (nullptr != cur) {
+            cur = cur->next;
+            ++ct;
+        }
+        return ct;
+    }
+    // explicit construction needed
+//    getKey()
+};
+template<typename K, typename V>
+struct HashMapNode : public HashNodeBase
+{
+    typedef K       KeyType;
+    typedef V       ValueType;
+
+    K   key;
+    V   value;
+    //explicit
+
+};
 
 //namespace detail_
 //{
@@ -48,7 +80,6 @@ __NAMESPACE_STARTER___BEGIN__
 //		{   return key;}
 //	};
 //}
-
 //
 //    template<typename K, typename V, typename C = std::less<K>>
 //    using HashMap = detail_::GenMap<K, V, C,

@@ -51,7 +51,7 @@
 
 #include "StarterCfgDef.h"
 #include "RelOps.h"
- 
+
 #include <utility>  // for move, forward, std::hash, initializer_list
 #include <iterator> // for iterator_traits
 #include <new>      // for placement new
@@ -213,7 +213,7 @@ class _CycListBase
         void
         M_checkRange(size_t idx) const {
             if(idx >= _impl.__size)
-                __throw_out_of_range("CycList::M_checkRange");
+                throw std::out_of_range("CycList::M_checkRange");
         }
         //!< list must be initialized before this function is called,
         //!< 'cause it will reverse the whole loop

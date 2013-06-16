@@ -439,7 +439,7 @@ RBTree<Node, Comparator>::
                 }
             } // else
         } // while
-        if (kid) kid->color_ = Color::Black;
+        if (nullptr != kid) kid->color_ = Color::Black;
     }
     return subj;
 }

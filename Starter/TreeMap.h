@@ -12,7 +12,6 @@
 
 #include "StarterCfgDef.h"
 
-
 #include "SetBase.h"
 #include "RBTree.h"
 
