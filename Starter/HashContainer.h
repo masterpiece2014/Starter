@@ -110,7 +110,7 @@ public:
                                 Node>::value,
         iterator>::type
      exclusiveInsertion(rcNode&& onode) {
-         size_t idx = hasher_(onode);
+         size_t idx = hasher_(onode) % tableSize_;
          if ((table_ + idx)->empty()) {
                 (table_ + idx)->insert(onode);
          }
@@ -124,7 +124,7 @@ public:
                                 Node>::value,
         iterator>::type
     duplicatedInsertion(rcNode&& onode) {
-         size_t idx = hasher_(onode);
+         size_t idx = hasher_(onode) % tableSize_;
         (table_ + idx)->insert(onode);
     }
 
