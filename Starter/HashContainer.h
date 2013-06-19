@@ -26,9 +26,6 @@ namespace detail_
     template<typename Node>
     struct ConstHashContainerIterator;
 
-    extern const unsigned long long PrimeLList[];
-    unsigned long long nextPrime(unsigned long long current);
-
 } // namespace detail_
 
 template<typename Bucket_t, typename Hash>
@@ -66,6 +63,28 @@ protected:
     HashType        hasher_;
     KeysCompType    comp_;
 
+protected:
+    Bucket_* M_getPosition(iterator iter) const noexcept {
+        if (iter.table_ == this->table_) {
+            if (iter.pos_ < this->size_) {
+                return this->table_ + iter.pos_;
+            }
+            else {
+                throw std::out_of_range(" iterator out og range");
+            }
+        }
+        else {
+            throw std::out_of_range("iterator from miss matched hash container");
+        }
+    }
+    Bucket_* M_getPosition(size_t idx) const noexcept {
+        if (idx < this->size_) {
+            return this->table_ + iter.pos_;
+        }
+        else {
+            throw std::out_of_range(" iterator out og range");
+        }
+    }
 public:
     explicit
     HashContainer(size_t tableSz = 1024)
@@ -76,21 +95,55 @@ public:
         table_ = static_cast<Bucket_*>(calloc(tableSz, sizeof(Bucket_*)));
     }
     ~HashContainer() {
-//        Bucket_* prev;
-//        Bucket_* cur;
-//        for (size_t idx = 0; idx != tableSize_; ++idx) {
-//            cur = table_ + idx;
-//            while (nullptr != cur) {
-//                prev = cur;
-//                cur = cur->next_;
-//                delete prev;
-//            }
-//        }
-//        ::operator delete(table_);
+        Bucket_* cur;
+        for (size_t idx = 0; idx != tableSize_; ++idx) {
+            cur = table_ + idx;
+            if (nullptr != cur) {
+                cur->~Bucket_();
+            }
+        }
+        ::operator delete(table_);
     }
+
+    template<typename rcNode>
+        typename std::enable_if<std::is_same<typename std::decay<rcNode>::type,
+                                Node>::value,
+        iterator>::type
+     exclusiveInsertion(rcNode&& onode) {
+         size_t idx = hasher_(onode);
+         if ((table_ + idx)->empty()) {
+                (table_ + idx)->insert(onode);
+         }
+         else{
+            return iterator(M_getPosition(idx));
+         }
+     }
+
+    template<typename rcNode>
+        typename std::enable_if<std::is_same<typename std::decay<rcNode>::type,
+                                Node>::value,
+        iterator>::type
+    duplicatedInsertion(rcNode&& onode) {
+         size_t idx = hasher_(onode);
+        (table_ + idx)->insert(onode);
+    }
+
+    void erase(iterator iter) {
+        --size_;
+        (M_getPosition(iter))->~Bucket_();
+    }
+
+    bool empty() const noexcept
+    {   return size_ == 0;  }
+
+    bool size() const noexcept
+    {   return size_;  }
 
 };
 
+///////////////////////////////////////
+
+//////////////////////////////
 #include "HashContainer-inl.h"
 
 __NAMESPACE_STARTER___END__

@@ -17,9 +17,6 @@
 #warning "multi-threaded functions here are experimental, and are unsafe!"
 
 
-#include <stack>
-#include <memory>
-
 #include "bwtest/bwtest.h"
 
 
@@ -32,59 +29,7 @@ namespace detail_{
 
 const uint16_t hardware_threads = std::thread::hardware_concurrency();
 
-template<typename Iterator>
-struct QuickSort_block
-{
-    void operator()(Iterator left, Iterator right)
-    {
-        Starter::quickSort(left, right);
-        //std::sort(left, right);
-    }
-};
-
     enum{switch_point = 16};
-
-    template <typename RAIter,
-                typename ValType = typename std::iterator_traits<RAIter>::value_type
-    > RAIter
-    getBestPivot(RAIter left, RAIter right) {
-
-        const size_t length = right - left;
-        --right;
-        RAIter median = length/2 + left;
-        ValType tmp;
-        if (*left < *right) {
-            if (*right < *median) {// l r m
-                starter_swap(*left, *right, tmp, ValType);
-            }
-            else if (*left < *median) { // l m r
-                starter_swap(*left, *median, tmp, ValType);
-            }                           // m l r
-        }
-        else {
-            if (*median < *right) { // m r l
-                starter_swap(*left, *right, tmp, ValType);
-            }
-            else if (*median < *left) {//r m l
-                starter_swap(*left, *median, tmp, ValType);
-            }                           // r l m
-        }
-//expect_true(*left < *right || *left < *median);
-//expect_true(*left > *right || *left > *median);
-        median = left + 1;
-        while (true) {
-            while (*median < *left) ++median;
-                    while (*left < *right) --right;
-            if (!(median < right)) {
-//expect_true(*right <= *left);
-                break;
-            }
-            starter_swap(*median, *right, tmp, ValType);
-            ++median;
-        }
-        starter_swap(*right, *left, tmp, ValType);
-        return right;
-    }
 
     template <typename RAIter,
                 typename ValType = typename std::iterator_traits<RAIter>::value_type
@@ -92,12 +37,11 @@ struct QuickSort_block
     hySortLoop(RAIter left, RAIter right, size_t depth) {
 
         while (right - left  > switch_point) {
-
             if (0 == depth) {
                 return heapSort(left, right);
             }
             --depth;
-            auto p1 = getBestPivot(left, right);
+            auto p1 = smartPartition(left, right);
             hySortLoop(left, p1, depth);
             left = p1;
         }
@@ -114,24 +58,26 @@ struct QuickSort_block
             return heapSort(left, right);
         }
         const uint16_t depth = detail_::log2(length);
-        RAIter pivot1 = detail_::getBestPivot(left, right);
+        RAIter pivot1 = detail_::smartPartition(left, right);
         RAIter pivot0;
 
-        //const uint16_t bounds = 1 + detail_::hardware_threads;
         RAIter pivot[5];
         std::thread tds[3]; // three new threads
         // 0    1   2   3   4
         pivot[0] = left;
         pivot[4] = right;
         --pivot[0];
-
-        pivot[2] = detail_::getBestPivot(pivot[0] + 1, pivot[4]);
+        //  partition 0 ~ 4
+        pivot[2] = detail_::smartPartition(pivot[0] + 1, pivot[4]);
+        // partition 0 ~2
         tds[0] = std::thread(
             [&]()   {
-                pivot[1] = detail_::getBestPivot(pivot[0] + 1, pivot[2]);
+                pivot[1] = detail_::smartPartition(pivot[0] + 1, pivot[2]);
             }
         );
-        pivot[3] = detail_::getBestPivot(pivot[2] + 1, pivot[4]);
+        // partition 2 ~ 4
+        pivot[3] = detail_::smartPartition(pivot[2] + 1, pivot[4]);
+        // sync!
         tds[0].join();
 
         for(int i = 0; i < 3; ++i) {

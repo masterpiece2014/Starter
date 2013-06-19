@@ -685,31 +685,72 @@ namespace detail_
         quickSort(last + 1, right);
     }
 
-//    template <typename RAIter,
-//                typename ValType = typename std::iterator_traits<RAIter>::value_type,// not supported by C++98.
-//                    typename Comp = std::function<bool(const ValType&, const ValType&)>// need c++11
-//    > void
-//    quickSort(RAIter left, RAIter right, Comp comp) {
-//
-//        size_t length = right - left;
-//        if(unlikely(length < 2)) {
-//            return;
-//        }
-//
-//        starter_xchg(*(left + length/2), *left, ValType);
-//
-//        RAIter last = left;
-//        for (RAIter cur = left + 1; cur != right; ++cur) {
-//            if (comp(*cur, *left)) {
-//                ++last;
-//                starter_xchg(*last, *cur, ValType);
-//            }
-//        }
-//        starter_xchg(*left, *last, ValType);
-//        quickSort(left, last, comp);
-//        quickSort(last + 1, right, comp);
-//    }
+    template <typename RAIter,
+                typename ValType = typename std::iterator_traits<RAIter>::value_type,// not supported by C++98.
+                    typename Comp = std::function<bool(const ValType&, const ValType&)>// need c++11
+    > void
+    quickSort(RAIter left, RAIter right, Comp comp) {
 
+        size_t length = right - left;
+        if(unlikely(length < 2)) {
+            return;
+        }
+
+        starter_xchg(*(left + length/2), *left, ValType);
+
+        RAIter last = left;
+        for (RAIter cur = left + 1; cur != right; ++cur) {
+            if (comp(*cur, *left)) {
+                ++last;
+                starter_xchg(*last, *cur, ValType);
+            }
+        }
+        starter_xchg(*left, *last, ValType);
+        quickSort(left, last, comp);
+        quickSort(last + 1, right, comp);
+    }
+
+    template <typename RAIter,
+                typename ValType = typename std::iterator_traits<RAIter>::value_type
+    > RAIter
+    smartPartition(RAIter left, RAIter right) {
+
+        const size_t length = right - left;
+        --right;
+        RAIter median = length/2 + left;
+        ValType tmp;
+        if (*left < *right) {
+            if (*right < *median) {// l r m
+                starter_swap(*left, *right, tmp, ValType);
+            }
+            else if (*left < *median) { // l m r
+                starter_swap(*left, *median, tmp, ValType);
+            }                           // m l r
+        }
+        else {
+            if (*median < *right) { // m r l
+                starter_swap(*left, *right, tmp, ValType);
+            }
+            else if (*median < *left) {//r m l
+                starter_swap(*left, *median, tmp, ValType);
+            }                           // r l m
+        }
+//expect_true(*left < *right || *left < *median);
+//expect_true(*left > *right || *left > *median);
+        median = left + 1;
+        while (true) {
+            while (*median < *left) ++median;
+                    while (*left < *right) --right;
+            if (!(median < right)) {
+//expect_true(*right <= *left);
+                break;
+            }
+            starter_swap(*median, *right, tmp, ValType);
+            ++median;
+        }
+        starter_swap(*right, *left, tmp, ValType);
+        return right;
+    }
 //    template <typename RAIter,
 //                typename ValType = typename std::iterator_traits<RAIter>::value_type// not supported by C++98.
 //    > void

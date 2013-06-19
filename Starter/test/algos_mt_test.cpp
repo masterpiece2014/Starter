@@ -1,9 +1,11 @@
+
+
+
 #include <chrono>
 #include <algorithm>
 #include <vector>
 #include "bwtest/bwtest.h"
 #include "AlgosMT.h"
-#include "Algos.h"
 
 using namespace std;
 
@@ -21,57 +23,34 @@ std::vector<uint64_t> vec1, vec2, vec3;
     expect_eq(vec2, vec3);
     sort(vec3.begin(), vec3.end());
     put_out << "Start:\n";
+    /////////////////////////////////////////////////////////////////////
 auto t_start1 = std::chrono::high_resolution_clock::now();
 
          // std::sort(vec1.begin(), vec1.end());
       // Starter::mtSort(vec1.begin(), vec1.end());
       Starter::hySort(vec1.begin(), vec1.end());
-      vector<int> vee;
-    int a[20];
-      for(auto i : a) {
-        vee.push_back(rand());
-      }
-
-    Starter::hySort(vee.begin(), vee.end());
-
-      for(int i = 0; i != 20;  ++i) {
-        cout <<  i << " " << vee[i] << endl;
-      }
 
      // Starter::quickSort(vec1.begin(), vec1.end());
         // Starter::heapSort(vec1.begin(), vec1.end());
         // Starter::insertionSort(vec1.begin(), vec1.end());
-
 auto t_end1 = std::chrono::high_resolution_clock::now();
-
+/////////////////////////////////////////////////////////////////////
     auto time_1 = std::chrono::duration_cast<std::chrono::microseconds>(t_end1 - t_start1).count();
-
    put_out << "Time:" << time_1 << endl;
-   // cout << is_same<decltype(time_1), long>::value << endl;
-   // std::chrono::milliseconds dura( 2000 );
-   // std::this_thread::sleep_for( dura );
+   /////////////////////////////////////////////////////////////////////
 auto t_start2 = std::chrono::high_resolution_clock::now();
 
           std::sort(vec2.begin(), vec2.end());
-       //   std::partial_sort(vec2.begin(), vec2.end(), vec2.end());
-
-       // Starter::MT_quickSort(vec2.begin(), vec2.end());
-//
        // Starter::quickSort(vec2.begin(), vec2.end());
-
       //   Starter::insertionSort(vec2.begin(), vec2.end());
-
 auto t_end2 = std::chrono::high_resolution_clock::now();
-
+/////////////////////////////////////////////////////////////////////
     auto time_2 = std::chrono::duration_cast<std::chrono::microseconds>(t_end2 - t_start2).count();
 
    put_out << "Time:" << time_2 << endl;
 
+
     expect_true(is_sorted(vec1.begin(), vec1.end()));
-
-//    auto ii = std::is_sorted_until(vec1.begin() + 99, vec1.end());
-//    cout << ii - (vec1.begin() + 99) << endl;
-
     expect_true(is_sorted(vec2.begin(), vec2.end()));
 
     put_out << ((double)time_1 / (double)time_2) << endl;
